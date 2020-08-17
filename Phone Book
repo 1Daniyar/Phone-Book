@@ -1,0 +1,208 @@
+package phonebook;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) throws FileNotFoundException {
+        readFile(directory, from);
+        readFile(find, to);
+        System.out.println("Start searching...");
+        System.out.println("Found " + find() + " / 500 entries. Time taken: " + time(mills));
+
+        System.out.println("\nStart searching (bubble sort + jump search)...");
+        bubbleSort();
+        System.out.println("Found " + jumpSearch() + " / 500 entries. Time taken: " + time(millsSort));
+        System.out.print("Sorting time: " + time(millsSort));
+        if(millsSort > 10 * mills) {
+            System.out.println(" -\nSTOPPED, moved to linear search");
+            find();
+            System.out.println("Searching time: " + time(mills));
+        } else
+            System.out.println("Searching time: " + time(millsJump));
+
+        System.out.println("\nStart searching (quick sort + binary search)...");
+        quickSort(from, 0, from.size() - 1);
+        System.out.println("Found " + binarySearch() + " / 500 entries. Time taken: " + time(millsQuickSort + millsBinarySearch));
+        System.out.println("Sorting time: " + time(millsQuickSort));
+        System.out.println("Searching time: " + time(millsBinarySearch));
+
+        from.clear();
+        to.clear();
+        readFile(directory, from);
+        readFile(find, to);
+
+        System.out.println("Start searching (hash table)...");
+        System.out.println("Found "  + " / 500 entries. Time taken: " + time(millsHashCreate + millsHashSearch));
+        System.out.println("Creating time: " + time(millsHashCreate));
+        System.out.println("Searching time: " + time(millsHashSearch));
+    }
+
+    static final String directory = "C:\\Users\\d-sha\\Desktop\\directory.txt";
+    static final String find = "C:\\Users\\d-sha\\Desktop\\find.txt";
+    static ArrayList<String> from = new ArrayList<>();
+    static ArrayList<String> to = new ArrayList<>();
+    static long mills;
+    static long millsSort;
+    static long millsJump;
+    static long millsQuickSort;
+    static long millsBinarySearch;
+    static long millsHashCreate;
+    static long millsHashSearch;
+
+    static void readFile(String dir, ArrayList<String> array) throws FileNotFoundException {
+        Scanner scanner = new Scanner(new File(dir));
+        while (scanner.hasNext()){
+            if(dir.equals(directory)){
+                scanner.next();
+            }
+            array.add(scanner.nextLine().trim());
+        }
+        scanner.close();
+    }
+
+    static int find(){
+        int count = 0;
+        mills = System.currentTimeMillis();
+        for(String dirVal : from){
+            for (String findVal : to){
+                if(dirVal.equals(findVal)){
+                    count++;
+                }
+            }
+        }
+        mills = System.currentTimeMillis() - mills;
+        return count;
+    }
+
+    static String time(long mills){
+        long min = (mills / 1000) / 60;
+        long sec = (mills / 1000) % 60;
+        long mls = mills - sec * 1000;
+        return String.format("%d min. %d sec. %d ms.", min, sec, mls);
+    }
+
+    static void bubbleSort() {
+        millsSort = System.currentTimeMillis();
+        String temp;
+        for (int i = 0; i < from.size() - 1; i++) {
+            for (int j = 0; j < from.size() - i - 1; j++) {
+                if (from.get(j).compareTo(from.get(j + 1)) > 0) {
+                    temp = from.get(j);
+                    from.set(j, from.get(j + 1));
+                    from.set(j + 1, temp);
+                }
+                millsSort = System.currentTimeMillis() - millsSort;
+                if (millsSort > 100 * mills)
+                    break;
+            }
+            if (millsSort > 100 * mills)
+                break;
+        }
+    }
+
+    static int jumpSearch(){
+        millsJump = System.currentTimeMillis();
+        int count = 0;
+        for(String toValue : to){
+            if(jumpSearch(from, toValue) > 0) {
+                count++;
+            }
+        }
+        millsJump = System.currentTimeMillis() - millsJump;
+        return count;
+    }
+
+    static int jumpSearch(ArrayList<String> array, String target){
+
+        int current = 0;
+        int prev = 0;
+
+        int jumpLength = (int) Math.sqrt(array.size());
+
+        while (current < array.size() - 1){
+            current = Math.min(array.size() - 1, current + jumpLength);
+
+            if(array.get(current).compareTo(target) >= 0)
+                break;
+
+            prev = current;
+        }
+
+        if((current == array.size() - 1) && target.compareTo(array.get(current)) > 0) {
+            return -1;
+        }
+
+        return backwardSearch(array, target, prev, current);
+    }
+
+    static int backwardSearch(ArrayList<String> array, String target, int left, int right){
+        for(int i = right; i > left; i--){
+            if(array.get(i).equals(target)){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    static void quickSort(ArrayList<String> array, int left, int right){
+        millsQuickSort = System.currentTimeMillis();
+        if(left < right){
+            int pivotIndex = partition(array, left, right);
+            quickSort(array, left, pivotIndex - 1);
+            quickSort(array, pivotIndex + 1, right);
+        }
+        millsQuickSort = System.currentTimeMillis() - millsQuickSort;
+    }
+
+    static int partition(ArrayList<String> array, int left, int right){
+        String pivot = array.get(right);
+        int partitionIndex = left;
+
+        for(int i = left; i < right; i++){
+            if(array.get(i).compareTo(pivot) > 0){
+                swapQuick(array, i, partitionIndex);
+                partitionIndex++;
+            }
+        }
+
+        swapQuick(array, partitionIndex, right);
+
+        return partitionIndex;
+    }
+
+    static void swapQuick(ArrayList<String> array, int i, int j){
+        String temp = array.get(i);
+        array.set(i, array.get(j));
+        array.set(j, temp);
+    }
+
+    static int binarySearch(){
+        millsBinarySearch = System.currentTimeMillis();
+        int count = 0;
+        for(String toElem : to){
+            if (binarySearch(from, toElem, 0, from.size() - 1) > 0){
+                count++;
+            }
+        }
+        millsBinarySearch = System.currentTimeMillis() - millsBinarySearch;
+        return count;
+    }
+
+    static int binarySearch(ArrayList<String> array, String elem, int left, int right){
+        while (left <= right){
+            int mid = left + (right - left) / 2;
+
+            if(array.get(mid).compareTo(elem) == 0){
+                return mid;
+            } else if(array.get(mid).compareTo(elem) < 0){
+                right = mid - 1;
+            } else {
+                left = mid + 1;
+            }
+        }
+        return -1;
+    }
+}
